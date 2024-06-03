@@ -12,6 +12,7 @@ pub struct Ray {
     points_draw: Vec<Vec2>,
 }
 
+#[derive(Clone, Copy, Debug)]
 pub enum Shape {
     Circle(Circle),
     Line(Line),
@@ -70,7 +71,7 @@ impl Ray {
         return (None, Some(self.tracer));
     }
 
-    pub fn bounce_angle(shape: &Shape, point: Vec2, pos: Vec2) -> f32 {
+    pub fn bounce_angle(shape: &Shape, point: Vec2, pos: Vec2, is_leaving: bool) -> f32 {
         // let line_vector = line.point1 - line.point2;
         match shape {
             Shape::Line(line) => {
@@ -120,10 +121,25 @@ impl Ray {
                 // (normal_to_ray + abs(normal_to_x))
             }
             Shape::Medium(medium) => {
-                let ray_vector = pos - point;
-                let ray_to_ground = ray_vector.angle_between(vec2(1.0, 0.0));
-                let new_angle = medium.calculate_refractive_angle(1.0, ray_to_ground);    
-                ray_to_ground + new_angle
+                if !is_leaving {
+                    let ray_vector = point - pos;
+                    let ray_to_ground = (ray_vector).angle_between(vec2(1.0, 0.0));
+                    let new_angle = medium.calculate_refractive_angle(1.0, ray_to_ground - PI/2.0);  
+    
+    
+                    let last_angle = -ray_to_ground - new_angle;
+                    // println!("angle: {}, ray: {}, both: {}", rad_to_deg(new_angle), rad_to_deg(ray_to_ground), rad_to_deg(last_angle));  
+                    last_angle
+                } else {
+                    let ray_vector = point - pos;
+                    let ray_to_ground = (ray_vector).angle_between(vec2(1.0, 0.0));
+                    let new_angle = Medium::calculate_refractive_angle_two_mediums(medium.refractive_index(), 1.0, ray_to_ground - PI/2.0);  
+    
+    
+                    let last_angle = -ray_to_ground - new_angle;
+                    // println!("angle: {}, ray: {}, both: {}", rad_to_deg(new_angle), rad_to_deg(ray_to_ground), rad_to_deg(last_angle));  
+                    last_angle
+                }
             }
         }
     }
@@ -140,29 +156,28 @@ impl Ray {
             self.tracer += step_dir;
             let (shape, point) = self.touching_object(shapes);
             if shape.is_some() {
-                match shape {
-                    Some(Shape::Line(line)) => {
+                match shape.unwrap() {
+                    Shape::Line(line) => {
                         if let Some(Shape::Line(last_line)) = last_shape {
                             if line.compare(&last_line) {
                                 continue;
                             }
                         }
                     }
-                    Some(Shape::Circle(circle)) => {
+                    Shape::Circle(circle) => {
                         if let Some(Shape::Circle(last_circle)) = last_shape {
                             if circle.compare(&last_circle) {
                                 continue;
                             }
                         }
                     }
-                    Some(Shape::Medium(medium)) => {
+                    Shape::Medium(medium) => {
                         if let Some(Shape::Medium(last_medium)) = last_shape {
                             if medium.compare(&last_medium) {
                                 continue;
                             }
                         }
                     }
-                    None => {}
                 }
                 return (shape, point.unwrap());
             }
@@ -181,7 +196,7 @@ impl Ray {
         for _ in 0..bounces as usize {
             let (shape, point) = self.ray_trace(0.1, shapes, &last_shape);
             if let Some(shape) = &shape {
-                let bounce_angle = Ray::bounce_angle(shape, self.tracer, self.origin);
+                let bounce_angle = Ray::bounce_angle(shape, self.tracer, self.origin, false);
                 self.direction = bounce_angle;
             }
             last_shape = shape;

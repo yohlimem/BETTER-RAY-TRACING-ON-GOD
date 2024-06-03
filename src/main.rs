@@ -36,19 +36,20 @@ fn model(app: &App) -> Model {
     let ray_num = 1;
     for i in 0..ray_num {
         rays.push(Ray::new(
-            vec2(-50.0, -200.0),
+            // vec2(0.0, 0.0),
+            vec2(150.0, -150.0),
             2.0 * PI / ray_num as f32 * i as f32,
         ));
     }
     let shapes = vec![
-        // Shape::Line(Line::from(vec2(100.0, -100.0), vec2(150.0, 150.0), 1.0)),
-        // Shape::Line(Line::from(vec2(-100.0, -100.0), vec2(-150.0, 150.0), 1.0)),
-        // Shape::Line(Line::from(vec2(-100.0, 100.0), vec2(100.0, 100.0), 1.0)),
-        // Shape::Line(Line::from(vec2(-100.0, -100.0), vec2(100.0, -110.0), 1.0)),
-        // Shape::Circle(Circle::from(vec2(100.0, 0.0), 50.0)),
-        Shape::Medium(mediums::Medium::new(vec2(-500.0, -100.0), vec2(500.0, 100.0), 1.5, rgba(0.0, 0.0, 1.0, 0.5))),
-        Shape::Medium(mediums::Medium::new(vec2(-500.0, -100.0), vec2(-300.0, -500.0), 1.5, rgba(0.0, 0.0, 1.0, 0.5))),
-        Shape::Medium(mediums::Medium::new(vec2(500.0, -100.0), vec2(300.0, -500.0), 1.5, rgba(0.0, 0.0, 1.0, 0.5))),
+        Shape::Line(Line::from(vec2(100.0, -100.0), vec2(150.0, 150.0), 1.0)),
+        Shape::Line(Line::from(vec2(-100.0, -100.0), vec2(-150.0, 150.0), 1.0)),
+        Shape::Line(Line::from(vec2(-100.0, 100.0), vec2(100.0, 100.0), 1.0)),
+        Shape::Line(Line::from(vec2(-100.0, -100.0), vec2(100.0, -110.0), 1.0)),
+        Shape::Circle(Circle::from(vec2(100.0, 0.0), 50.0)),
+        // Shape::Medium(mediums::Medium::new(vec2(-500.0, -100.0), vec2(500.0, 100.0), 1.5, rgba(0.0, 0.0, 1.0, 0.5))),
+        // Shape::Medium(mediums::Medium::new(vec2(-500.0, -100.0), vec2(-300.0, -500.0), 1.5, rgba(0.0, 0.0, 1.0, 0.5))),
+        // Shape::Medium(mediums::Medium::new(vec2(500.0, -100.0), vec2(300.0, -500.0), 1.5, rgba(0.0, 0.0, 1.0, 0.5))),
     ];
 
     Model { egui, rays, shapes }
@@ -65,7 +66,7 @@ fn update(app: &App, model: &mut Model, update: Update) {
     });
 
     for ray in model.rays.iter_mut() {
-        ray.ray_trace_loop(4, &model.shapes);
+        ray.ray_trace_loop(10, &model.shapes);
         ray.start_direction = (app.mouse.position() - ray.start_position).angle();
         // ray.start_position = app.mouse.position();
     }

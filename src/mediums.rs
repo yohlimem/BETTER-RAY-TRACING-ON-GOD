@@ -6,7 +6,6 @@ use crate::rays::Shape_Util;
 pub struct Medium {
     pub min: Vec2,
     pub max: Vec2,
-    pub is_inside: bool,
     refractive_index: f32,
     color: Rgba,
 }
@@ -16,7 +15,6 @@ impl Medium {
         Medium {
             min,
             max,
-            is_inside: false,
             refractive_index,
             color,
         }
@@ -41,11 +39,18 @@ impl Medium {
         }
         refractive_angle
     }
+    pub fn calculate_refractive_angle_two_mediums(n1:f32, n2: f32, enter_angle: f32,) -> f32{
+        let refractive_angle = (n1 * (enter_angle).sin() / n2).asin();
+        if refractive_angle.is_nan() {
+            return enter_angle;
+        }
+        refractive_angle
+    }
 }
 
 impl Shape_Util for Medium {
     fn intersect(&self, point: &Vec2) -> bool {
-        point.x >= self.min.x
+            point.x >= self.min.x
             && point.x <= self.max.x
             && point.y >= self.min.y
             && point.y <= self.max.y
