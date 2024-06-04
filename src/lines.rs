@@ -42,8 +42,8 @@ impl Line {
         distance
     }
     pub fn slope(&self) -> Option<f32> {
-        let dx = self.end.x - self.start.x;
-        let dy = self.end.y - self.start.y;
+        let dx = self.end.x - self.start.x + 0.0001;
+        let dy = self.end.y - self.start.y + 0.0001;
 
         // Check if the line is vertical (infinite slope)
         if dx == 0.0 {

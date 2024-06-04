@@ -1,4 +1,5 @@
 use nannou::prelude::*;
+use nannou_egui::egui::Vec2;
 use nannou_egui::{self, egui, Egui};
 
 mod circles;
@@ -16,7 +17,7 @@ struct Model {
     rays: Vec<Ray>,
     shapes: Vec<Shape>,
 }
-
+// TODO: https://www.youtube.com/watch?v=naaeH1qbjdQ
 fn main() {
     nannou::app(model).update(update).run();
 }
@@ -35,21 +36,22 @@ fn model(app: &App) -> Model {
     let mut rays = vec![];
     let ray_num = 1;
     for i in 0..ray_num {
+        let angle = 2.0 * PI / ray_num as f32 * i as f32;
         rays.push(Ray::new(
             // vec2(0.0, 0.0),
             vec2(150.0, -150.0),
-            2.0 * PI / ray_num as f32 * i as f32,
+            vec2(angle.cos(), angle.sin()),
         ));
     }
     let shapes = vec![
-        Shape::Line(Line::from(vec2(100.0, -100.0), vec2(150.0, 150.0), 1.0)),
-        Shape::Line(Line::from(vec2(-100.0, -100.0), vec2(-150.0, 150.0), 1.0)),
-        Shape::Line(Line::from(vec2(-100.0, 100.0), vec2(100.0, 100.0), 1.0)),
-        Shape::Line(Line::from(vec2(-100.0, -100.0), vec2(100.0, -110.0), 1.0)),
-        Shape::Circle(Circle::from(vec2(100.0, 0.0), 50.0)),
-        // Shape::Medium(mediums::Medium::new(vec2(-500.0, -100.0), vec2(500.0, 100.0), 1.5, rgba(0.0, 0.0, 1.0, 0.5))),
-        // Shape::Medium(mediums::Medium::new(vec2(-500.0, -100.0), vec2(-300.0, -500.0), 1.5, rgba(0.0, 0.0, 1.0, 0.5))),
-        // Shape::Medium(mediums::Medium::new(vec2(500.0, -100.0), vec2(300.0, -500.0), 1.5, rgba(0.0, 0.0, 1.0, 0.5))),
+        // Shape::Line(Line::from(vec2(100.0, -100.0), vec2(150.0, 150.0), 1.0)),
+        // Shape::Line(Line::from(vec2(-150.0, 150.0), vec2(-100.0, -100.0), 1.0)),
+        // Shape::Line(Line::from(vec2(-100.0, 100.0), vec2(100.0, 100.0), 1.0)),
+        // Shape::Line(Line::from(vec2(-100.0, -100.0), vec2(100.0, -110.0), 1.0)),
+        // Shape::Circle(Circle::from(vec2(100.0, 0.0), 50.0)),
+        Shape::Medium(mediums::Medium::new(vec2(-500.0, -100.0), vec2(500.0, 100.0), 1.5, rgba(0.0, 0.0, 1.0, 0.5))),
+        // Shape::Medium(mediums::Medium::new(vec2(-300.0, -500.0), vec2(-500.0, -100.0), 1.5, rgba(0.0, 0.0, 1.0, 0.5))),
+        // Shape::Medium(mediums::Medium::new(vec2(300.0, -500.0), vec2(500.0, -100.0), 1.5, rgba(0.0, 0.0, 1.0, 0.5))),
     ];
 
     Model { egui, rays, shapes }
@@ -60,14 +62,18 @@ fn update(app: &App, model: &mut Model, update: Update) {
     egui.set_elapsed_time(update.since_start);
 
     let ctx = egui.begin_frame();
+    
 
     egui::Window::new("Rum window").show(&ctx, |ui| {
         ui.label("res");
     });
 
     for ray in model.rays.iter_mut() {
-        ray.ray_trace_loop(10, &model.shapes);
-        ray.start_direction = (app.mouse.position() - ray.start_position).angle();
+        ray.ray_trace_loop(3, &model.shapes);
+        ray.start_direction = (app.mouse.position() - ray.start_position).normalize();
+        if app.mouse.buttons.left().is_down() {
+            ray.start_position = app.mouse.position();
+        }
         // ray.start_position = app.mouse.position();
     }
 }

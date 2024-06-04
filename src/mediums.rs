@@ -1,7 +1,7 @@
 use nannou::prelude::*;
 use crate::rays::Shape_Util;
 
-
+/// Remember to not switch between max and min
 #[derive(Clone, Copy, Debug)]
 pub struct Medium {
     pub min: Vec2,
@@ -32,19 +32,70 @@ impl Medium {
         self.color
     }
 
-    pub fn calculate_refractive_angle(&self, n1: f32, enter_angle: f32,) -> f32{
+    pub fn calculate_refractive_angle(&self, n1: f32, enter_angle: f32,) -> Vec2{
         let refractive_angle = (n1 * (enter_angle).sin() / self.refractive_index).asin();
         if refractive_angle.is_nan() {
-            return enter_angle;
+            return vec2(refractive_angle.cos(), refractive_angle.sin());
         }
-        refractive_angle
+        vec2(refractive_angle.cos(), refractive_angle.sin())
     }
-    pub fn calculate_refractive_angle_two_mediums(n1:f32, n2: f32, enter_angle: f32,) -> f32{
-        let refractive_angle = (n1 * (enter_angle).sin() / n2).asin();
-        if refractive_angle.is_nan() {
-            return enter_angle;
+    pub fn calculate_refractive_angle_two_mediums(
+    n1: f32,
+    n2: f32,
+    incident: Vec2,
+    normal: Vec2,
+) -> Option<Vec2>{
+        let incident = incident.normalize();
+        let normal = normal.normalize();
+        
+        let cos_theta_i = incident.dot(normal);
+        let sin_theta_i2 = 1.0 - cos_theta_i * cos_theta_i;
+        
+        let sin_theta_r2 = (n1 / n2) * (n1 / n2) * sin_theta_i2;
+        
+        if sin_theta_r2 > 1.0 {
+            return None; // Total internal reflection
         }
-        refractive_angle
+        
+        let cos_theta_r = (1.0 - sin_theta_r2).sqrt();
+        
+        let refracted_parallel = (n1 / n2) * (incident - cos_theta_i * normal);
+        let refracted_perpendicular = -cos_theta_r * normal;
+        
+        Some(refracted_parallel + refracted_perpendicular)
+
+    }
+    pub fn normal_at_point(&self, point: Vec2) -> Vec2 {
+        let distance_from_top = self.max.y - point.y;
+        let distance_from_bottom = point.y - self.min.y;
+        let distance_from_right = self.max.x - point.x;
+        let distance_from_left = point.x - self.min.x;
+
+        let mut largest_distance = distance_from_top;
+        let mut normal = vec2(0.0, -1.0);
+
+        if distance_from_bottom < largest_distance {
+            largest_distance = distance_from_bottom;
+            // println!("distance_from_bottom: {}", distance_from_bottom);
+            normal = vec2(0.0, 1.0);
+        }
+
+        if distance_from_right < largest_distance {
+            largest_distance = distance_from_right;
+            // println!("distance_from_right: {}", distance_from_right);
+
+            normal = vec2(-1.0, 0.0);
+        }
+
+        if distance_from_left < largest_distance {
+            // println!("distance_from_left: {}", distance_from_left);
+
+            normal = vec2(1.0, 0.0);
+        }
+
+        normal
+
+
     }
 }
 

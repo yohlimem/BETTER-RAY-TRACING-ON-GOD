@@ -4,13 +4,14 @@ use crate::mediums::Medium;
 use nannou::prelude::*;
 pub struct Ray {
     pub start_position: Vec2,
-    pub start_direction: f32,
+    pub start_direction: Vec2,
     origin: Vec2,
-    pub direction: f32,      // angle
+    pub direction: Vec2,      // normal
     tracer: Vec2,            // the object that moves to trace
     intersect: Option<Vec2>, // the end where the object is close
     points_draw: Vec<Vec2>,
 }
+
 
 #[derive(Clone, Copy, Debug)]
 pub enum Shape {
@@ -20,7 +21,7 @@ pub enum Shape {
 }
 
 impl Ray {
-    pub fn new(origin: Vec2, direction: f32) -> Self {
+    pub fn new(origin: Vec2, direction: Vec2) -> Self {
         Ray {
             origin,
             start_position: origin,
@@ -71,75 +72,31 @@ impl Ray {
         return (None, Some(self.tracer));
     }
 
-    pub fn bounce_angle(shape: &Shape, point: Vec2, pos: Vec2, is_leaving: bool) -> f32 {
+    pub fn bounce_angle(shape: &Shape, point: Vec2, pos: Vec2, is_leaving: bool) -> Vec2 {
         // let line_vector = line.point1 - line.point2;
+        let ray_vector = point - pos;
         match shape {
             Shape::Line(line) => {
-                let ray_vector = pos - point;
-                let ray_to_ground = ray_vector.angle_between(vec2(1.0, 0.0));
 
-                // let line_equ = line.slope();
-                // if line_equ.is_none(){
-                //     // println!("0.0");
-                //     return ray_to_ground
-                // }
                 let normal_m = -1.0 / line.slope().unwrap_or(f32::MAX);
-                let normal_line =
-                    Line::equation_to_line(normal_m, line.intercept().unwrap_or(f32::MAX));
+                let normal_line = Line::equation_to_line(normal_m, line.intercept().unwrap_or(f32::MAX));
                 let normal_vector = normal_line.to_vector();
 
-                // let normal_to_ground = normal_vector.angle_between(vec2(-1.0, 0.0));
-                let line_to_ground = line.to_vector().angle_between(vec2(1.0, 0.0));
-                // let line_to_ray = line.to_vector().angle_between(ray_vector);
-                // let normal_to_ray = normal_vector.angle_between(ray_vector);
-                // println!("ray: {}, normal: {}", ray_to_ground, normal_to_ground);
-                // println!("{}", line_to_ray);
-
-                // println!("{}", rad_to_deg(line_to_ground));
-                // if rad_to_deg(ray_to_ground + line_to_ground - PI/2.0).abs() >= 180.0{
-                //     return ray_to_ground + line_to_ground
-
-                // }
-                // ray_to_ground + line_to_ground - PI/2.0
-                if line_to_ground >= 0.0 {
-                    // println!("bad");
-                    ray_to_ground - (line_to_ground) + PI
-                } else {
-                    ray_to_ground - line_to_ground - PI / 2.0
-                }
+                Self::reflect(ray_vector, normal_vector).normalize()
             }
             Shape::Circle(circle) => {
                 let normal = circle.normal(point);
-                let ray_vector = point - pos;
-                let normal_to_ray = ray_vector.angle_between(normal);
-                let normal_to_x = normal.angle_between(vec2(1.0, 0.0));
-                if normal_to_x < 0.0 {
-                    normal_to_ray + abs(normal_to_x) + PI
-                } else {
-                    normal_to_ray - abs(normal_to_x) + PI
-                }
-                // (normal_to_ray + abs(normal_to_x))
+                Self::reflect(ray_vector, normal).normalize()
+
             }
             Shape::Medium(medium) => {
-                if !is_leaving {
-                    let ray_vector = point - pos;
-                    let ray_to_ground = (ray_vector).angle_between(vec2(1.0, 0.0));
-                    let new_angle = medium.calculate_refractive_angle(1.0, ray_to_ground - PI/2.0);  
-    
-    
-                    let last_angle = -ray_to_ground - new_angle;
-                    // println!("angle: {}, ray: {}, both: {}", rad_to_deg(new_angle), rad_to_deg(ray_to_ground), rad_to_deg(last_angle));  
-                    last_angle
-                } else {
-                    let ray_vector = point - pos;
-                    let ray_to_ground = (ray_vector).angle_between(vec2(1.0, 0.0));
-                    let new_angle = Medium::calculate_refractive_angle_two_mediums(medium.refractive_index(), 1.0, ray_to_ground - PI/2.0);  
-    
-    
-                    let last_angle = -ray_to_ground - new_angle;
-                    // println!("angle: {}, ray: {}, both: {}", rad_to_deg(new_angle), rad_to_deg(ray_to_ground), rad_to_deg(last_angle));  
-                    last_angle
-                }
+                let normal = -medium.normal_at_point(point);
+                let refractive_angle = Medium::calculate_refractive_angle_two_mediums(1.0, 1.5,ray_vector, normal);
+
+                refractive_angle.unwrap_or(vec2(0.0, 0.0))
+                
+                
+                 
             }
         }
     }
@@ -150,8 +107,7 @@ impl Ray {
         last_shape: &Option<Shape>,
     ) -> (Option<Shape>, Vec2) {
         self.tracer = self.origin;
-        let step_dir = vec2(self.direction.cos(), self.direction.sin()) * step;
-        // println!("direction: {}", self.direction);
+        let step_dir = self.direction * step;
         for _ in 0..(1000.0 / step) as usize {
             self.tracer += step_dir;
             let (shape, point) = self.touching_object(shapes);
@@ -196,14 +152,21 @@ impl Ray {
         for _ in 0..bounces as usize {
             let (shape, point) = self.ray_trace(0.1, shapes, &last_shape);
             if let Some(shape) = &shape {
-                let bounce_angle = Ray::bounce_angle(shape, self.tracer, self.origin, false);
-                self.direction = bounce_angle;
+                let bounce_normal = Ray::bounce_angle(shape, self.tracer, self.origin, false);
+                self.direction = bounce_normal;
             }
             last_shape = shape;
             self.points_draw.push(self.tracer);
             self.origin = point;
         }
         // println!("points_draw': {:?}", self.points_draw);
+    }
+}
+
+impl Ray {
+    pub fn reflect(vec: Vec2, normal: Vec2) -> Vec2 {
+        // https://www.youtube.com/watch?v=naaeH1qbjdQ
+        vec - 2.0 * vec.dot(normal) / normal.dot(normal) * normal
     }
 }
 
